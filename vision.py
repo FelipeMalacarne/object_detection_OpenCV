@@ -25,11 +25,15 @@ class Vision:
         # TM_CCOEFF_NORMED, TM_CCOEFF, TM_CCORR, TM_CCORR_NORMED, TM_SQDIFF, TM_SQDIFF NORMED
         self.method = method
 
-    def find(self, haystack_img, threshold=0.5):
+    def find(self, haystack_img, threshold=0.5, max_results=10):
+        # Run OpenCV Algorithm
         result = cv.matchTemplate(haystack_img, self.needle_img, self.method)
 
         locations = np.where(result >= threshold)
         locations = list(zip(*locations[::-1]))
+
+        if not locations:
+            return np.array([], dtype=np.int32).reshape(0, 4)
 
         rectangles = []
         for loc in locations:
@@ -38,6 +42,11 @@ class Vision:
             rectangles.append(rect)
 
         rectangles, weights = cv.groupRectangles(rectangles, 1, 0.05)
+
+        # For performance, return a limited number of results
+        if len(rectangles) > max_results:
+            print('warning: too many results, raise the threshold')
+            rectangles = rectangles[:max_results]
 
         return rectangles
 
@@ -138,6 +147,13 @@ class Vision:
         if not hsv_filter:
             hsv_filter = self.get_hsv_filter_from_controls()
 
+        h, s, v = cv.split(hsv)
+        s = self.shift_channel(s, hsv_filter.sAdd)
+        s = self.shift_channel(s, -hsv_filter.sSub)
+        v = self.shift_channel(v, hsv_filter.vAdd)
+        v = self.shift_channel(v, -hsv_filter.vSub)
+        hsv = cv.merge([h, s, v])
+
         # Set minimum and maximum HSV values to display
         lower = np.array([hsv_filter.hMin, hsv_filter.sMin, hsv_filter.vMin])
         upper = np.array([hsv_filter.hMax, hsv_filter.sMax, hsv_filter.vMax])
@@ -151,3 +167,16 @@ class Vision:
 
         return img
 
+    # apply adjustments to an HSV channel
+    # https://stackoverflow.com/questions/49697363/shifting-hsv-pixel-values-in-python-using-numpy
+    def shift_channel(self, c, amount):
+        if amount > 0:
+            lim = 255 - amount
+            c[c >= lim] = 255
+            c[c < lim] += amount
+        elif amount < 0:
+            amount = -amount
+            lim = amount
+            c[c <= lim] = 0
+            c[c > lim] -=amount
+        return c

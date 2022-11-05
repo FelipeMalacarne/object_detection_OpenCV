@@ -20,8 +20,11 @@ def main():
         # Get the image
         screenshot = wincap.get_screenshot()
 
+        # pre-process the image
+        processed_image = Vision_barbfishing.apply_hsv_filter(screenshot)
+
         # Do object detection
-        rectangles = Vision_barbfishing.find(screenshot, 0.5)
+        rectangles = Vision_barbfishing.find(processed_image, 0.5)
 
         # Draw the detection results onto the original image
         output_image = Vision_barbfishing.draw_rectangles(screenshot, rectangles)
