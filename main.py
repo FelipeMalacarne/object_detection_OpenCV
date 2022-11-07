@@ -68,8 +68,9 @@ while(True):
         bot.update_screenshot(wincap.screenshot)
 
     elif bot.state == BotState.FISHING:
-        # nothing is needed while we wait for the mining to finish
-        pass
+        # when fishing we need fresh screenshots to see if inventory is full
+        bot.update_screenshot(wincap.screenshot)
+
     
 
 

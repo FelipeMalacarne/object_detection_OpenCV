@@ -9,6 +9,7 @@ class BotState:
     SEARCHING = 1
     MOVING = 2
     FISHING = 3
+    DROPPING = 4
 
 class FishingBot:
 
@@ -17,6 +18,8 @@ class FishingBot:
     FISHING_SECONDS = 15
     MOVEMENT_STOPPED_THRESHOLD = 0.975
     TOOLTIP_MATCH_THRESHOLD = 0.76
+    INVENTORY_MATCH_THRESHOLD = 0.76
+    NOT_FISHING_THRESHOLD = 0.65
 
     # threading properties
     stopped = True
@@ -32,6 +35,8 @@ class FishingBot:
     window_w = 0
     window_h = 0
     use_rod_tooltip = None
+    full_inventory_message = None
+    not_fishing_message = None
 
     # Constructor 
     def __init__(self, window_offset, window_size):
@@ -44,6 +49,8 @@ class FishingBot:
 
         # pre-load the needle to confirm fishing spot
         self.use_rod_tooltip = cv.imread('./fishing_images/use_rod_tooltip.jpg', cv.IMREAD_UNCHANGED) 
+        self.full_inventory_message = cv.imread('./fishing_images/full_inventory.jpg', cv.IMREAD_UNCHANGED)
+        self.not_fishing_message = cv.imread('./fishing_images/not_fishing.jpg', cv.IMREAD_UNCHANGED)
 
         # start bot in the initializing mode to allow mark the time which started
         self.state = BotState.INITIALIZING
@@ -75,6 +82,7 @@ class FishingBot:
                 # do no bot actions until the start period is complete
                 if time() > self.timestamp + self.INITIALIZING_SECONDS:
                     # start searching
+                    print('Searching...')
                     self.lock.acquire()
                     self.state = BotState.SEARCHING
                     self.lock.release()
@@ -84,6 +92,7 @@ class FishingBot:
                 success = self.click_next_target()
                 # if successful, switch state to moving
                 if success:
+                    print('Moving...')
                     self.lock.acquire()
                     self.state = BotState.MOVING
                     self.lock.release()
@@ -98,18 +107,36 @@ class FishingBot:
                     sleep(0.6)
                 else:
                     # reset the timestamp marker to the current time, switch state to fishing
+                    print('Fishing...')
                     self.lock.acquire()
-                    self.timestamp = time()
                     self.state = BotState.FISHING
                     self.lock.release()
 
             elif self.state == BotState.FISHING:
-                # see if we're done fishing, for now we just wait for the time
-                if time() > self.timestamp + self.FISHING_SECONDS:
+                # see if invetory is full message, if it is, start dropping
+                if self.inv_is_full():
                     # return to the searching state
+                    self.lock.acquire()
+                    self.state = BotState.DROPPING
+                    self.lock.release()
+
+                elif self.not_fishing():
+                    print('Searching...')
                     self.lock.acquire()
                     self.state = BotState.SEARCHING
                     self.lock.release()
+            
+            elif self.state == BotState.DROPPING:
+                print("Dropping...")
+                # Drop all items in 3-28 slots of inventory
+                self.drop_items(2, 27)
+
+                print('Searching...')
+                self.lock.acquire()
+                self.state = BotState.SEARCHING
+                self.lock.release()
+
+                
 
 
     def get_screen_position(self, pos):
@@ -128,7 +155,7 @@ class FishingBot:
         # we only care about the value when the two screenshot are the same, so the needle position is (0, 0), 
         # since both images are the same size, this should be the only result that exists.
         similarity = result[0][0]
-        print('Movement detectionsimilarity: {}'.format(similarity))
+        # print('Movement detection similarity: {}'.format(similarity))
 
         if similarity >= self.MOVEMENT_STOPPED_THRESHOLD:
             # pictures look similar, so we've probably stopped moving
@@ -168,8 +195,9 @@ class FishingBot:
             pyautogui.moveTo(x=screen_x, y=screen_y)
             # time for the tooltip appear
             sleep(0.8)
+
             # confirm fish tooltip
-            if self.confirm_tooltip(target_pos):
+            if self.confirm_tooltip():
                 print(f'Click on confirmed target at x:{screen_x} y:{screen_y}')
                 found_fish = True
                 pyautogui.click()
@@ -188,14 +216,57 @@ class FishingBot:
 
         return targets
 
-    def confirm_tooltip(self, target_position):
-        # check the current screenshot for the limestone tooltip using match template
+    def confirm_tooltip(self):
+        # check the current screenshot for the fishing tooltip using match template
         result = cv.matchTemplate(self.screenshot, self.use_rod_tooltip, cv.TM_CCOEFF_NORMED)
         # Get the best match position
         min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
         if max_val >= self.TOOLTIP_MATCH_THRESHOLD:
-            print('tooltip founded')
+            print('Tooltip founded')
             return True
         else:
-            print('tooltip not found')
+            print('Tooltip not found')
             return False 
+
+    def inv_is_full(self):
+        # check if the current screenshot contains full inv message using match template
+        result = cv.matchTemplate(self.screenshot, self.full_inventory_message, cv.TM_CCOEFF_NORMED)
+        # Get the best match position
+        min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+        if max_val >= self.INVENTORY_MATCH_THRESHOLD:
+            print('Inventory is full, dropping')
+            return True
+        else:
+            return False 
+
+    def not_fishing(self):
+        # wait for the display updates
+        sleep(2.4)
+        # check if the current screenshot contains NOT fishing message using match template
+        result = cv.matchTemplate(self.screenshot, self.not_fishing_message, cv.TM_CCOEFF_NORMED)
+        # Get the best match position
+        min_val, max_val, min_loc, max_loc = cv.minMaxLoc(result)
+        if max_val >= self.NOT_FISHING_THRESHOLD:
+            print('NOT Fishing detected')
+            return True
+        else:
+            return False 
+
+    def drop_items(self, min_range, max_range):
+        inventory = [
+            (580,210),(620,210),(660,210),(700,210),
+            (580,250),(620,250),(660,250),(700,250),
+            (580,290),(620,290),(660,290),(700,290),
+            (580,330),(620,330),(660,330),(700,330),
+            (580,370),(620,370),(660,370),(700,370),
+            (580,400),(620,400),(660,400),(700,400),
+            (580,440),(620,440),(660,440),(700,440)
+        ]
+        pyautogui.keyDown('shift')
+        for i in range(min_range, max_range):
+            pos = self.get_screen_position(inventory[i])
+            inv_x, inv_y = pos
+            pyautogui.moveTo(x=inv_x, y=inv_y)
+            pyautogui.click()
+            sleep(0.05)
+        pyautogui.keyUp('shift')
