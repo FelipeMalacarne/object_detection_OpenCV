@@ -12,44 +12,6 @@ class Vision:
     needle_h = 0
     method = None
 
-    # constructor
-    def __init__(self, needle_img_path, method=cv.TM_CCOEFF_NORMED):
-        # load the image we're trying to match
-        self.needle_img = cv.imread(needle_img_path, cv.IMREAD_UNCHANGED)
-
-        #Save the dimensions of the needle_img
-        self.needle_w = self.needle_img.shape[1]
-        self.needle_h = self.needle_img.shape[0]
-
-        # 6 metodos
-        # TM_CCOEFF_NORMED, TM_CCOEFF, TM_CCORR, TM_CCORR_NORMED, TM_SQDIFF, TM_SQDIFF NORMED
-        self.method = method
-
-    def find(self, haystack_img, threshold=0.5, max_results=10):
-        # Run OpenCV Algorithm
-        result = cv.matchTemplate(haystack_img, self.needle_img, self.method)
-
-        locations = np.where(result >= threshold)
-        locations = list(zip(*locations[::-1]))
-
-        if not locations:
-            return np.array([], dtype=np.int32).reshape(0, 4)
-
-        rectangles = []
-        for loc in locations:
-            rect = [int(loc[0]), int(loc[1]), self.needle_w, self.needle_h]
-            rectangles.append(rect)
-            rectangles.append(rect)
-
-        rectangles, weights = cv.groupRectangles(rectangles, 1, 0.05)
-
-        # For performance, return a limited number of results
-        if len(rectangles) > max_results:
-            print('warning: too many results, raise the threshold')
-            rectangles = rectangles[:max_results]
-
-        return rectangles
-
 
     def get_click_points(self, rectangles):
         points = []
@@ -91,7 +53,7 @@ class Vision:
             # draw the center point
             cv.drawMarker(haystack_img, (center_x, center_y), marker_color, marker_type)                        
 
-        return points
+        return haystack_img
 
     # Create gui windows with controls for adjusting arguments in real-time
     def init_control_gui(self):

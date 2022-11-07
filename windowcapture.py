@@ -1,10 +1,14 @@
 import win32gui, win32ui, win32con
 import numpy as np
+from threading import Thread, Lock
 
 class WindowCapture:
 
+    # Threading properties
+    stopped = True
+    lock = None
+    screenshot = None
     # properties
-
     w = 0 # set this
     h = 0 # set this
     hwnd = None 
@@ -16,6 +20,9 @@ class WindowCapture:
     # constructor
 
     def __init__(self, window_name=None):
+        # Create a thread lock object
+        self.lock = Lock()
+
         # Find the handle for the window we want to capture.
         # if no window name is give, capture the entire screen.
         if window_name is None:
@@ -31,8 +38,8 @@ class WindowCapture:
         self.h = window_rect[3] - window_rect[1]
 
         # considerar bordas da janela
-        border_pixels = 7
-        titlebar_pixels = 25
+        border_pixels = 8
+        titlebar_pixels = 30
         self.w = self.w - (border_pixels * 2)
         self.h = self.h - titlebar_pixels - border_pixels
         self.cropped_x = border_pixels
@@ -91,3 +98,20 @@ class WindowCapture:
     def get_screen_position(self, pos):
         return (pos[0] + self.offset_x, pos[1] + self.offset_y)
 
+
+    def start(self):
+        self.stopped = False
+        t = Thread(target=self.run)
+        t.start()
+
+    def stop(self):
+        self.stopped = True
+
+    def run(self):
+        while not self.stopped:
+            # get an updated image of the game
+            screenshot = self.get_screenshot()
+            # lock the thread while updating the results
+            self.lock.acquire()
+            self.screenshot = screenshot
+            self.lock.release()
