@@ -3,15 +3,46 @@ Using OpenCV Library to track ingame objects
 
 -  Projeto iniciado a partir da ideia de detectar e reconhecer objetos em imagens usando a library OpenCV. 
 
-- Aplicação captura a tela da janela de escolha tirando várias screenshots por segundo.
-    - A fim de melhorar a performance desse passo, foi feito a substituição do uso das funções de screenshot das libraries pyautogui e Pillow para a utilização direta da API do windows. Isso trouxe um aumento na taxa de quadros de 20fps para 70fps na captura da tela sem processamento.
+## ⚙️Tecnologias utilizadas e instalação:
 
-- É feito o processamento de cada frame capturado utilizando a library OpenCV, destacando os objetos detectados no output de video em tempo real
+- Python 3.10.7: Você pode fazer o download e instalar a partir do [site oficial do python](https://www.python.org/downloads/)
 
-- Função de pre-processamento de imagens, manipulação e aplicação em tempo real de um filtro de Saturation, Hue e Value (HSV) que pode ser utilizado para apagar os pixels fora do range estipulado pelo filtro, simplificando a imagen a fim de atuar como estágio de pre-processamento da imagem.
+- Pacotes utilizados:
+    - [openCV](https://opencv.org)
 
-- Aplicação de conceitos de POO, ao separar classes de detecção, processamento, filtro, ações automatizadas.
+    - [pyautogui](https://pyautogui.readthedocs.io/en/latest/install.html)
 
-- Implementação de Ações de Bot
-    - A partir daqui surge a necessidade de concorrência, de modo que a aplicação continue rodando a captura de tela, mesmo quando aguarda as ações de Bot, do contrário a captura só atualizaria após o bot concluir a tarefa.
-    - Portanto, inicia-se a aplicação dos conceitos de Threads e concorrência.
+    - [numpy](https://numpy.org/install/)
+
+    - [pywin32](https://pypi.org/project/pywin32/)
+
+- Instalação com o pip:
+    ```
+    pip install opencv-python
+    pip install pyautogui
+    pip install numpy
+    pip install pywin32
+    ```
+
+## 🔬 Exemplo
+![](./fishing_images/example.jpg)
+## 🛠️ Uso
+
+### Setup no Runelite
+- É Necessário a utilização do plugin 'Fishing' no client [Runelite](https://runelite.net) de Oldschool Runescape
+
+![](./fishing_images/runeliteplugin.jpg)
+
+- Game client layout = "Fixed - Classic Layout" para melhor perfomance
+
+- Posicione a Isca e a Vara de pesca nos dois primeiros slots do inventário, 
+
+### Execução
+- Abra o terminal na pasta raiz e execute o comando 
+```
+python .\main.py
+```
+
+- Troque manualmente para a aba do Runelite e Não mova a janela durante a execução (coordenadas são calculadas uma unica vez durante o startup)
+
+
