@@ -45,4 +45,6 @@ python .\main.py
 
 - Troque manualmente para a aba do Runelite e Não mova a janela durante a execução (coordenadas são calculadas uma unica vez durante o startup)
 
+- Para sair do script, pressione a tecla "Q" do teclado enquanto a janela "matches" está selecionada
+
 
